@@ -2,6 +2,7 @@
 #define BOOK_H
 
 #include "tools.h"
+#include <list>
 //#include "hashtable.h"
 
   // Estructura para representar una reserva de libro
@@ -27,13 +28,14 @@ class Book {
         for (auto& i : author_) hash_number_ += i;
         break;
     }
+    std::cout << hash_number_ << std::endl;
   }
   bool operator==(const Book& book) const { return name_ == std::string(book); }
   operator long() const { return hash_number_; }
   operator std::string() const { return name_ + " | by: " + author_ + " | " + std::to_string(price_) + "€"; }
 
 // Función para obtener la fecha de tres dias a partir de hoy en formato día-mes-año
-std::string GetDate() {
+  std::string GetDate() {
     std::time_t now = std::time(nullptr);
     std::tm* localTime = std::localtime(&now);
     
@@ -45,10 +47,10 @@ std::string GetDate() {
     dateStream << std::setfill('0') << std::setw(2) << day << "/" << std::setw(2) << month << "/" << year;
 
     return dateStream.str();
-}
+  }
 
-// Función para calcular la fecha de devolución (1 mes después de la fecha de inicio)
-std::string CalculateReturnDate(const std::string& startDate) {
+  // Función para calcular la fecha de devolución (1 mes después de la fecha de inicio)
+  std::string CalculateReturnDate(const std::string& startDate) {
     std::tm tm = {};
     std::istringstream ss(startDate);
     ss >> std::get_time(&tm, "%d/%m/%Y");
@@ -58,37 +60,50 @@ std::string CalculateReturnDate(const std::string& startDate) {
     char buffer[11];
     std::strftime(buffer, sizeof(buffer), "%d/%m/%Y", &tm);
     return std::string(buffer);
-}
+  }
 
-// Modifica la función MakeReservation
-void ReservationNotAvailable(Reservation& reservation, const Reservation& previousReservation = Reservation()) {
+  bool FindPreviousReservation(const Reservation& reservation, Reservation& previousReservation) {
+    for (const Reservation& res : book_reservations_) {
+      if (!res.name.empty() && res.name == reservation.name) {
+        previousReservation = res;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void MakeReservation(Reservation& reservation) {
     std::string todayDate = GetDate();
-    reservation.name = name_;
+    std::string name;
+    std::cout << "Introduce the name of the person who will make the reservation: ";
+    std::cin.ignore();
+    std::getline(std::cin, name);
+    reservation.name = name;
     reservation.startDate = todayDate;
     reservation.returnDate = CalculateReturnDate(todayDate);
-
-    if (!previousReservation.name.empty() && reservation.name == previousReservation.name) {
-        reservation.startDate = previousReservation.returnDate;
-        reservation.returnDate = CalculateReturnDate(reservation.startDate);
-        std::cout << "Nueva reserva para: " << name_ << ".  Con fecha: "  << reservation.startDate << " - " << reservation.returnDate << std::endl;
-    } else {
-        reservation.returnDate = CalculateReturnDate(reservation.startDate);
-        std::cout << "Nueva reserva para: " << name_ << ".  Con fecha: "  << reservation.startDate << " - " << reservation.returnDate << std::endl;
+    Reservation previous_reservation;
+    if (FindPreviousReservation(reservation, previous_reservation)) {
+      reservation.startDate = previous_reservation.returnDate;
+      reservation.returnDate = CalculateReturnDate(reservation.startDate);
+      std::cout << "Nueva reserva para: " << name_ << ".  Con fecha: "  << reservation.startDate << " - " << reservation.returnDate << std::endl;
+    } 
+    else {
+      reservation.returnDate = CalculateReturnDate(reservation.startDate);
+      std::cout << "Nueva reserva para: " << name_ << ".  Con fecha: "  << reservation.startDate << " - " << reservation.returnDate << std::endl;
     }
-
     // Agregar la reserva al mapa de reservas de libros
-    bookReservations_[name_].push_back(reservation);
-}
+    book_reservations_.push_back(reservation);
+  }
 
   void ShowReservations(const std::string& name_) {
     std::cout << "Reservas para el libro '" << name_ << "':" << std::endl;
-    if (bookReservations_.find(name_) != bookReservations_.end()) {
-      const std::vector<Reservation>& reservations = bookReservations_[name_];
-       for (const Reservation& reservation : reservations) {
-           std::cout << "Fecha de inicio: " << reservation.startDate << " | Fecha de retorno: " << reservation.returnDate << std::endl;
-        }
-    } else {
-        std::cout << "No hay reservas para el libro '" << name_<< "'." << std::endl;
+    if (book_reservations_.size() > 0) {
+      for (const Reservation& reservation : book_reservations_) {
+        std::cout << "Fecha de inicio: " << reservation.startDate << " | Fecha de retorno: " << reservation.returnDate << std::endl;
+      }
+    } 
+    else {
+      std::cout << "No hay reservas para el libro '" << name_ << "'." << std::endl;
     }
 }
 
@@ -107,7 +122,7 @@ void ReservationNotAvailable(Reservation& reservation, const Reservation& previo
   float price_ = 0.0;
   long hash_number_ = 0;
   std::string returnDate_;
-  static std::map<std::string, std::vector<Reservation>> bookReservations_;
+  std::list<Reservation> book_reservations_;
 };
 
 #endif

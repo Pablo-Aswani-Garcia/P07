@@ -157,12 +157,6 @@ Table<Book>* CreateHashTable(const std::map<std::string, int>& parameters) {
   return new HashTable<Book, DynamicSequence<Book>>(parameters.at("-ts"), *disperse_function);
 }
 
-/* Variables globales para el caso 5 */
-Reservation newReservation;
-Reservation previousReservation;
-std::map<std::string, std::vector<Reservation>> Book::bookReservations_;
-std::map<std::string, Reservation> previousReservations;
-
 /** @brief Shows the options menu of the program.
  *  @param[in] hash_table. The hash table to show.
  */
@@ -186,14 +180,13 @@ void Menu(Table<Book>* hash_table) {
       case '1': {
         Book* new_book;
         std::string name, author;
+        float price;
         std::cout << BLUE << "Insert the Book's name: " << RESET;
         std::cin.ignore();
         std::getline(std::cin, name);
         std::cout << BLUE << "Insert the Book's author: " << RESET;
-        std::cin.ignore();
         std::getline(std::cin, author);
         std::cout << BLUE << "Insert the Book's price: " << RESET;
-        float price;
         std::cin >> price;
         new_book = new Book(name, author, price, SEARCHMODE);
         std::cout << RED << std::endl;
@@ -217,7 +210,6 @@ void Menu(Table<Book>* hash_table) {
         std::cin.ignore();
         std::getline(std::cin, name);
         std::cout << BLUE << "Insert the Book's author to search: " << RESET;
-        std::cin.ignore();
         std::getline(std::cin, author);
         int index = 0;
         std::cout << std::endl;
@@ -236,51 +228,48 @@ void Menu(Table<Book>* hash_table) {
         // Implementar la función de guardar en base de datos
       }
       case '5': {
-      Book* book;
-      std::string name, author;
-      std::cout << BLUE << "Enter the name of the book to reserve: " << RESET;
-      std::cin.ignore();
-      std::getline(std::cin, name);
-      std::cout << std::endl;
-
-      // Crear un objeto Book con los datos ingresados
-      book = new Book(name, author, 0.0, SEARCHMODE); // Suponiendo que el constructor de Book recibe el nombre y el autor
-      
-      Reservation previousReservation = previousReservations[name]; // Obtener la reserva anterior para este libro
-
-      book->ReservationNotAvailable(newReservation, previousReservation); // Llama a MakeReservation
-      previousReservation = newReservation;
-      book->ShowReservations(name); // Muestra la lista de reservas y fechas de disponibilidad
-
-      if (!OPEN && hash_table->IsFull()) {
-        std::cout << "The table is full!" << std::endl;
-      } else if (hash_table->Insert(*book)) {
-        std::cout << GREEN << "The book has been inserted succesfully\n" << RESET << std::endl;
-      }
-
-      previousReservations[name] = newReservation; // Guarda los datos si se cambia de libro
-
-      delete book; // Liberar la memoria del objeto Book
-      break;
+        Book* book;
+        Reservation newReservation;
+        std::map<std::string, Reservation> previousReservations;
+        std::string name, author;
+        std::cout << BLUE << "Enter the name of the book to reserve: " << RESET;
+        std::cin.ignore();
+        std::getline(std::cin, name);
+        std::cout << BLUE << "Enter the author of the book to reserve: " << RESET;
+        std::getline(std::cin, author);
+        std::cout << std::endl;
+        book = new Book(name, author, 0.0, SEARCHMODE); 
+        int index = 0;
+        if (hash_table->Search(*book, index)) {
+          book->MakeReservation(newReservation); // Llama a MakeReservation
+          book->ShowReservations(name); // Muestra la lista de reservas y fechas de disponibilidad
+        } 
+        else {
+          std::cout << RED << "You can't reserve a book that doesn't exist in the database" << RESET << std::endl;
+          break;
+        }
+        Reservation previousReservation = previousReservations[name]; // Obtener la reserva anterior para este libro
+        previousReservations[name] = newReservation; // Guarda los datos si se cambia de libro
+        delete book; // Liberar la memoria del objeto Book
+        break;
       }
       case '6': {
-      Book* book;
-      std::string name, author;
-      std::cout << BLUE << "Enter the name of the book to modify: " << RESET;
-      std::cin.ignore();
-      std::getline(std::cin, name);
-      std::cout << std::endl;
+        Book* book;
+        std::string name, author;
+        std::cout << BLUE << "Enter the name of the book to modify: " << RESET;
+        std::cin.ignore();
+        std::getline(std::cin, name);
+        std::cout << std::endl;
+        std::string newReturnDate;
+        std::cout << BLUE << "Enter the new return date for the book: " << RESET;
+        std::cin >> newReturnDate;
 
-      std::string newReturnDate;
-      std::cout << BLUE << "Enter the new return date for the book: " << RESET;
-      std::cin >> newReturnDate;
+        book = new Book(name, author, 0.0, SEARCHMODE);
+        book->ModifyReturnDate(newReturnDate); // Llama a ModifyReturnDate para modificar la fecha de entrega
+        
+        std::cout << GREEN << "Return date modified successfully to: "<< newReturnDate << RESET << std::endl;
 
-      book = new Book(name, author, 0.0, SEARCHMODE);
-      book->ModifyReturnDate(newReturnDate); // Llama a ModifyReturnDate para modificar la fecha de entrega
-      
-      std::cout << GREEN << "Return date modified successfully to: "<< newReturnDate << RESET << std::endl;
-
-      break;
+        break;
       }
       default:
         std::cout << RED << "Incorrect option" << RESET << std::endl;
