@@ -1,0 +1,5 @@
+- To compile the program just execute the make command in a shell.
+
+- The program itself won't take any parameter and only will consider the data specified in "table_properties.conf".
+
+- The "table_properties.conf" file contains in the first line all the attributes needed to initialize the table in the Hash program (all the other textlines will be ignored).
