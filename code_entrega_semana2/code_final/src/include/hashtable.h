@@ -13,8 +13,12 @@ class Table {
   virtual bool Insert(const Key& key) = 0;
   virtual bool IsFull() const = 0;
   virtual std::ostream& Write(std::ostream& out) const = 0;
+  virtual std::ostream& SaveToFile(std::ostream& out) const { return out; }
+  virtual void LoadFile(std::istream& in);
+  void SetSearchMode(int search_mode) { search_mode_ = search_mode; }
  protected:
   int table_size_;
+  int search_mode_;
 };
 
 template <class Key, class Container = StaticSequence<Key>>
@@ -26,6 +30,7 @@ class HashTable : public Table<Key> {
   bool Insert(const Key& key);
   bool IsFull() const;
   std::ostream& Write(std::ostream& out) const;
+  std::ostream& SaveToFile(std::ostream& out) const override;
  private:
   DisperseFunction<Key>* fd_ = nullptr;
   ExplorationFunction<Key>* fe_ = nullptr;
@@ -46,6 +51,15 @@ class HashTable<Key, DynamicSequence<Key>> : public Table<Key> {
   DisperseFunction<Key>* fd_ = nullptr;
   DynamicSequence<Key>** table_;
 };
+
+inline std::string trim(const std::string& str) {
+  size_t first = str.find_first_not_of(' ');
+  if (std::string::npos == first) {
+      return str;
+  }
+  size_t last = str.find_last_not_of(' ');
+  return str.substr(first, (last - first + 1));
+}
 
 // ================================ HASH TABLE STATIC SEQUENCE ================================ //
 
@@ -132,6 +146,83 @@ std::ostream& HashTable<Key, Container>::Write(std::ostream& out) const {
     std::cout << std::endl;
   }
   return out;
+}
+
+template<class Key, class Container>
+std::ostream& HashTable<Key, Container>::SaveToFile(std::ostream& out) const {
+  out << "Nombre del libro | Autor | Estado | Precio | Reservas\n";
+  out << "------------------------------------------------------\n";
+  for (int i = 0; i < this->table_size_; ++i) {
+    if (this->table_[i] != nullptr) {
+      for (int j = 0; j < this->block_size_; ++j) {
+        Key book = this->table_[i]->GetKey(j);
+        if (book.IsDefault()) continue;
+        out << book.GetName() << " | "
+            << book.GetAuthor() << " | "
+            << (book.GetReservations().empty() ? "Disponible" : "Reservado") << " | "
+            << std::fixed << std::setprecision(2) << book.GetPrice() << "€ | ";
+        if (book.GetReservations().empty()) {
+          out << "-\n";
+        } 
+        else {
+          for (Reservation& reservation : book.GetReservations()) {
+            out << reservation.name << " @ " << reservation.returnDate;
+            if (&reservation != &book.GetReservations().back()) {
+              out << ", ";
+            }
+          }
+          out << "\n";
+        }
+      }
+    }
+  }
+  return out;
+}
+
+template<class Key>
+void Table<Key>::LoadFile(std::istream& in) {
+  std::string line;
+  // Skip the header lines
+  std::getline(in, line);
+  std::getline(in, line);
+
+  while (std::getline(in, line)) {
+    std::stringstream ss(line);
+    std::string name, author, status, price, reservations;
+    std::getline(ss, name, '|');
+    std::getline(ss, author, '|');
+    std::getline(ss, status, '|');
+    std::getline(ss, price, '|');
+    std::getline(ss, reservations);
+
+    // Remove leading and trailing spaces
+    name = trim(name);
+    author = trim(author);
+    status = trim(status);
+    price = trim(price);
+    reservations = trim(reservations);
+
+    // Create a new book
+    Book book(name, author, std::stof(price.substr(1)), search_mode_); // Assuming search_mode is 0
+
+    // If the book has reservations
+    if (reservations != "-") {
+      std::stringstream ss_res(reservations);
+      std::string reservation;
+      while (std::getline(ss_res, reservation, ',')) {
+        reservation = trim(reservation);
+        size_t pos = reservation.find(" @ ");
+        std::string person = reservation.substr(0, pos);
+        std::string returnDate = reservation.substr(pos + 3);
+        std::string startDate = book.GetOriginalDate(returnDate); 
+        // Create a new reservation and add it to the book
+        Reservation res = {person, startDate, returnDate};
+        book.AddReservation(res);
+      }
+    }
+    // Add the book to the table
+    this->Insert(book);
+  }
 }
 
 // ================================ HASH TABLE DYNAMIC SEQUENCE ================================ // 

@@ -1,6 +1,6 @@
 #include "include/tools.h"
 
-bool OPEN;
+bool OPEN, LIBRARIAN;
 int SEARCHMODE;
 
 /** @brief Checks if the parameters are compatible with the hash function
@@ -162,22 +162,31 @@ Table<Book>* CreateHashTable(const std::map<std::string, int>& parameters) {
  */
 void Menu(Table<Book>* hash_table) {
   char option;
+  hash_table->SetSearchMode(SEARCHMODE);
+  std::ifstream datafile("library.dat");
+  if (!datafile) {
+    std::cerr << "Error opening the database file" << std::endl;
+    return;
+  }
+  hash_table->LoadFile(datafile);
   while (option != '3') {
     std::cout << YELLOW << std::endl;
     hash_table->Write(std::cout);
     std::cout << std::endl << std::endl;
-    std::cout << "1. Insert a Book" << std::endl;
-    std::cout << "2. Search a Book" << std::endl;
-    std::cout << "3. Save to Database" << std::endl;
-    std::cout << "5. Reserve a book not available now" << std::endl;
-    std::cout << "6. Extend reservation" << std::endl;
-    std::cout << "4. Quit" << std::endl;
-    std::cout << "Select an option: ";
+    if (LIBRARIAN) { std::cout << "0. Insert a Book" << std::endl; }
+                     std::cout << "1. Search a Book" << std::endl;
+    if (!LIBRARIAN)  std::cout << "2. Reserve a book not available now" << std::endl;
+    if (!LIBRARIAN)  std::cout << "3. Extend reservation" << std::endl;
+    if (!LIBRARIAN)  std::cout << "5. Log in as librarian" << std::endl;
+    else             std::cout << "2. Log out" << std::endl;
+    if (LIBRARIAN) { std::cout << "8. Save to Database" << std::endl; }
+                     std::cout << "4. Quit" << std::endl;
+                     std::cout << "Select an option: ";
     std::cin >> option;
     std::cout << RESET << std::endl;
     if (option == '4') break;
     switch (option) {
-      case '1': {
+      case '0': {
         Book* new_book;
         std::string name, author;
         float price;
@@ -203,7 +212,7 @@ void Menu(Table<Book>* hash_table) {
         delete new_book;
         break;
       }
-      case '2': {
+      case '1': {
         Book* book;
         std::string name, author;
         std::cout << BLUE << "Insert the Book's name to search: " << RESET;
@@ -224,36 +233,39 @@ void Menu(Table<Book>* hash_table) {
         delete book;
         break;
       }
-      case '3': {
-        // Implementar la función de guardar en base de datos
-      }
-      case '5': {
-        Book* book;
-        Reservation newReservation;
-        std::map<std::string, Reservation> previousReservations;
-        std::string name, author;
-        std::cout << BLUE << "Enter the name of the book to reserve: " << RESET;
-        std::cin.ignore();
-        std::getline(std::cin, name);
-        std::cout << BLUE << "Enter the author of the book to reserve: " << RESET;
-        std::getline(std::cin, author);
-        std::cout << std::endl;
-        book = new Book(name, author, 0.0, SEARCHMODE); 
-        int index = 0;
-        if (hash_table->Search(*book, index)) {
-          book->MakeReservation(newReservation); // Llama a MakeReservation
-          book->ShowReservations(name); // Muestra la lista de reservas y fechas de disponibilidad
-        } 
-        else {
-          std::cout << RED << "You can't reserve a book that doesn't exist in the database" << RESET << std::endl;
-          break;
+      case '2': {
+        if (LIBRARIAN) {
+          std::cout << GREEN << "Logged out" << RESET << std::endl;
+          LIBRARIAN = false;
         }
-        Reservation previousReservation = previousReservations[name]; // Obtener la reserva anterior para este libro
-        previousReservations[name] = newReservation; // Guarda los datos si se cambia de libro
-        delete book; // Liberar la memoria del objeto Book
+        else {
+          Book* book;
+          Reservation newReservation;
+          std::map<std::string, Reservation> previousReservations;
+          std::string name, author;
+          std::cout << BLUE << "Enter the name of the book to reserve: " << RESET;
+          std::cin.ignore();
+          std::getline(std::cin, name);
+          std::cout << BLUE << "Enter the author of the book to reserve: " << RESET;
+          std::getline(std::cin, author);
+          std::cout << std::endl;
+          book = new Book(name, author, 0.0, SEARCHMODE); 
+          int index = 0;
+          if (hash_table->Search(*book, index)) {
+            book->MakeReservation(newReservation); // Llama a MakeReservation
+            book->ShowReservations(name); // Muestra la lista de reservas y fechas de disponibilidad
+          } 
+          else {
+            std::cout << RED << "You can't reserve a book that doesn't exist in the database" << RESET << std::endl;
+            break;
+          }
+          Reservation previousReservation = previousReservations[name]; // Obtener la reserva anterior para este libro
+          previousReservations[name] = newReservation; // Guarda los datos si se cambia de libro
+          delete book; // Liberar la memoria del objeto Book
+        }
         break;
       }
-      case '6': {
+      case '3': {
         Book* book;
         std::string name, author;
         std::cout << BLUE << "Enter the name of the book to modify: " << RESET;
@@ -269,6 +281,33 @@ void Menu(Table<Book>* hash_table) {
         
         std::cout << GREEN << "Return date modified successfully to: "<< newReturnDate << RESET << std::endl;
 
+        break;
+      }
+      case '5': {
+        std::string username;
+        std::cout << BLUE << "Introduce the username: ";
+        std::cin.ignore();
+        std::getline(std::cin, username);
+        if (username == "librarian") {
+          std::string password;
+          std::cout << BLUE << "Introduce the password: ";
+          std::getline(std::cin, password);
+          if (password == "password") {
+            std::cout << GREEN << "Logged in as librarian" << RESET << std::endl;
+            LIBRARIAN = true;
+          } 
+          else {
+            std::cout << RED << "Incorrect password" << RESET << std::endl;
+          }
+        } 
+        else {
+          std::cout << RED << "Incorrect username" << RESET << std::endl;
+        }
+        break;
+      }
+      case '8': {
+        std::ofstream file("library.dat");
+        hash_table->SaveToFile(file);
         break;
       }
       default:

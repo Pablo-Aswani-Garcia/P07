@@ -161,7 +161,7 @@ template <class Key>
 std::ostream& StaticSequence<Key>::Write(std::ostream& out) const {
   for (int i = 0; i < block_size_; ++i) {
     if (block_[i] != nullptr) {
-      out << std::string(*block_[i]) << " ";
+      out << std::string(*block_[i]) << " | ";
     }
   }
   return out;
