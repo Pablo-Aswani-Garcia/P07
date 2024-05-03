@@ -14,8 +14,8 @@ struct Reservation {
 
 class Book {
  public:
-  Book() = default;
-  Book(const std::string& name, const std::string& author, const float& price, const int& search_mode) : name_(name), author_(author), price_(price) {
+  Book() : default_(true) {}
+  Book(const std::string& name, const std::string& author, const double& price, const int& search_mode) : name_(name), author_(author), price_(price) {
     switch (search_mode) {
       case 0:
         for (auto& i : name_) hash_number_ += i;
@@ -28,12 +28,17 @@ class Book {
         for (auto& i : author_) hash_number_ += i;
         break;
     }
-    std::cout << hash_number_ << std::endl;
   }
   bool operator==(const Book& book) const { return name_ == std::string(book); }
   operator long() const { return hash_number_; }
-  operator std::string() const { return name_ + " | by: " + author_ + " | " + std::to_string(price_) + "€"; }
-
+  operator std::string() const { return name_ + ", " + author_ + " -> " + std::to_string(price_) + "€"; }
+  bool IsDefault() const { return default_; }
+  std::string GetName() const { return name_; }
+  std::string GetAuthor() const { return author_; }
+  double GetPrice() const { return price_; }
+  std::string GetReturnDate() const { return returnDate_; }
+  std::list<Reservation> GetReservations() const { return book_reservations_; }
+  void AddReservation(const Reservation& reservation) { book_reservations_.push_back(reservation); }
 // Función para obtener la fecha de tres dias a partir de hoy en formato día-mes-año
   std::string GetDate() {
     std::time_t now = std::time(nullptr);
@@ -47,6 +52,18 @@ class Book {
     dateStream << std::setfill('0') << std::setw(2) << day << "/" << std::setw(2) << month << "/" << year;
 
     return dateStream.str();
+  }
+
+  std::string GetOriginalDate(std::string return_date) {
+    std::tm tm = {};
+    std::istringstream ss(return_date);
+    ss >> std::get_time(&tm, "%d/%m/%Y");
+    std::time_t time = std::mktime(&tm);
+    time -= 30 * 24 * 60 * 60; // Resta 30 días (1 mes)
+    tm = *std::localtime(&time);
+    char buffer[11];
+    std::strftime(buffer, sizeof(buffer), "%d/%m/%Y", &tm);
+    return std::string(buffer);
   }
 
   // Función para calcular la fecha de devolución (1 mes después de la fecha de inicio)
@@ -117,9 +134,10 @@ class Book {
   }
 
  private:
+  bool default_ = false;
   std::string name_;
   std::string author_;
-  float price_ = 0.0;
+  double price_ = 0.0;
   long hash_number_ = 0;
   std::string returnDate_;
   std::list<Reservation> book_reservations_;
