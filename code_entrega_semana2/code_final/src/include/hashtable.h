@@ -11,6 +11,7 @@ class Table {
   virtual ~Table() {}
   virtual bool Search(const Key& key, int& index) const = 0;
   virtual bool Insert(const Key& key) = 0;
+  virtual bool Delete(const Key& key) = 0;
   virtual bool IsFull() const = 0;
   virtual std::ostream& Write(std::ostream& out) const = 0;
   virtual std::ostream& SaveToFile(std::ostream& out) const { return out; }
@@ -28,6 +29,7 @@ class HashTable : public Table<Key> {
   virtual ~HashTable();
   bool Search(const Key& key, int& index) const;
   bool Insert(const Key& key);
+  bool Delete(const Key& key);
   bool IsFull() const;
   std::ostream& Write(std::ostream& out) const;
   std::ostream& SaveToFile(std::ostream& out) const override;
@@ -45,6 +47,7 @@ class HashTable<Key, DynamicSequence<Key>> : public Table<Key> {
   virtual ~HashTable();
   bool Search(const Key& key, int& index) const;
   bool Insert(const Key& key);
+  bool Delete(const Key& key);
   bool IsFull() const;
   std::ostream& Write(std::ostream& out) const;
  private:
@@ -131,6 +134,33 @@ bool HashTable<Key, Container>::Insert(const Key& key) {
 }
 
 template<class Key, class Container>
+bool HashTable<Key, Container>::Delete(const Key& key) {
+  int index = (*fd_)(key);
+  if (table_[index]->Search(key)) {
+    return table_[index]->Delete(key);
+  }
+  else {
+    if (table_[(*fd_)(key)]->IsFull()) {
+      int attempt = 1;
+      unsigned aux_index = ((*fd_)(key) + (*fe_)(key, attempt)) % this->table_size_;
+      while (!table_[aux_index]->Search(key) && table_[aux_index]->IsFull()) {
+        ++attempt;
+        if (attempt > this->table_size_) {
+          std::cout << "All possible indexes have been tried" << std::endl;
+          return false;
+        }
+        aux_index = ((*fd_)(key) + (*fe_)(key, attempt)) % this->table_size_;
+      }
+      if (table_[aux_index]->Search(key)) {
+        table_[aux_index]->Delete(key);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+template<class Key, class Container>
 bool HashTable<Key, Container>::IsFull() const {
   for (int i = 0; i < this->table_size_; ++i) {
     if (!table_[i]->IsFull()) return false;
@@ -194,16 +224,15 @@ void Table<Key>::LoadFile(std::istream& in) {
     std::getline(ss, status, '|');
     std::getline(ss, price, '|');
     std::getline(ss, reservations);
-
     // Remove leading and trailing spaces
     name = trim(name);
     author = trim(author);
     status = trim(status);
     price = trim(price);
     reservations = trim(reservations);
-
+    if (!price.empty() && price.back() == '€') price.pop_back();
     // Create a new book
-    Book book(name, author, std::stof(price.substr(1)), search_mode_); // Assuming search_mode is 0
+    Book book(name, author, std::stod(price), search_mode_); 
 
     // If the book has reservations
     if (reservations != "-") {
@@ -250,6 +279,12 @@ template<class Key>
 bool HashTable<Key, DynamicSequence<Key>>::Search(const Key& key, int& index) const {
   index = (*fd_)(key);
   return table_[(*fd_)(key)]->Search(key);
+}
+
+template<class Key>
+bool HashTable<Key, DynamicSequence<Key>>::Delete(const Key& key) {
+  unsigned index = (*fd_)(key);
+  return table_[index]->Delete(key);
 }
 
 template<class Key>

@@ -169,16 +169,17 @@ void Menu(Table<Book>* hash_table) {
     return;
   }
   hash_table->LoadFile(datafile);
-  while (option != '3') {
+  while (option != '4') {
     std::cout << YELLOW << std::endl;
     hash_table->Write(std::cout);
     std::cout << std::endl << std::endl;
     if (LIBRARIAN) { std::cout << "0. Insert a Book" << std::endl; }
                      std::cout << "1. Search a Book" << std::endl;
     if (!LIBRARIAN)  std::cout << "2. Reserve a book not available now" << std::endl;
-    if (!LIBRARIAN)  std::cout << "3. Extend reservation" << std::endl;
-    if (!LIBRARIAN)  std::cout << "5. Log in as librarian" << std::endl;
     else             std::cout << "2. Log out" << std::endl;
+    if (!LIBRARIAN)  std::cout << "3. Extend reservation" << std::endl;
+    else             std::cout << "3. Delete a Book" << std::endl;
+    if (!LIBRARIAN)  std::cout << "5. Log in as librarian" << std::endl;
     if (LIBRARIAN) { std::cout << "8. Save to Database" << std::endl; }
                      std::cout << "4. Quit" << std::endl;
                      std::cout << "Select an option: ";
@@ -189,7 +190,7 @@ void Menu(Table<Book>* hash_table) {
       case '0': {
         Book* new_book;
         std::string name, author;
-        float price;
+        double price;
         std::cout << BLUE << "Insert the Book's name: " << RESET;
         std::cin.ignore();
         std::getline(std::cin, name);
@@ -225,7 +226,7 @@ void Menu(Table<Book>* hash_table) {
         book = new Book(name, author, 0.0, SEARCHMODE);
         if (hash_table->Search(*book, index)) {
           std::cout << GREEN << "The Book is in the hash table" << std::endl;
-          std::cout << "Book: " << std::string(*book) << " | Position: " << index << RESET << std::endl;
+          std::cout << "Position: " << index << RESET << std::endl;
         }
         else {
           std::cout << RED << "The Book is not in the hash table" << RESET << std::endl;
@@ -266,49 +267,81 @@ void Menu(Table<Book>* hash_table) {
         break;
       }
       case '3': {
-        Book* book;
-        std::string name, author;
-        std::cout << BLUE << "Enter the name of the book to modify: " << RESET;
-        std::cin.ignore();
-        std::getline(std::cin, name);
-        std::cout << std::endl;
-        std::string newReturnDate;
-        std::cout << BLUE << "Enter the new return date for the book: " << RESET;
-        std::cin >> newReturnDate;
-
-        book = new Book(name, author, 0.0, SEARCHMODE);
-        book->ModifyReturnDate(newReturnDate); // Llama a ModifyReturnDate para modificar la fecha de entrega
-        
-        std::cout << GREEN << "Return date modified successfully to: "<< newReturnDate << RESET << std::endl;
-
-        break;
-      }
-      case '5': {
-        std::string username;
-        std::cout << BLUE << "Introduce the username: ";
-        std::cin.ignore();
-        std::getline(std::cin, username);
-        if (username == "librarian") {
-          std::string password;
-          std::cout << BLUE << "Introduce the password: ";
-          std::getline(std::cin, password);
-          if (password == "password") {
-            std::cout << GREEN << "Logged in as librarian" << RESET << std::endl;
-            LIBRARIAN = true;
-          } 
-          else {
-            std::cout << RED << "Incorrect password" << RESET << std::endl;
+        if (LIBRARIAN) {
+          Book* book;
+          std::string name, author;
+          std::cout << BLUE << "Enter the name of the book to delete: " << RESET;
+          std::cin.ignore();
+          std::getline(std::cin, name);
+          std::cout << BLUE << "Enter the author of the book to delete: " << RESET;
+          std::getline(std::cin, author);
+          book = new Book(name, author, 0.0, SEARCHMODE);
+          if (hash_table->Delete(*book)) {
+            std::cout << GREEN << "The book has been deleted succesfully" << RESET << std::endl;
           }
-        } 
+          else {
+            std::cout << RED << "It wasn't possible to delete the book from the table" << RESET << std::endl;
+          }
+          delete book;
+        }
         else {
-          std::cout << RED << "Incorrect username" << RESET << std::endl;
+          Book* book;
+          std::string name, author;
+          std::cout << BLUE << "Enter the name of the book to modify: " << RESET;
+          std::cin.ignore();
+          std::getline(std::cin, name);
+          std::cout << std::endl;
+          std::string newReturnDate;
+          std::cout << BLUE << "Enter the new return date for the book: " << RESET;
+          std::cin >> newReturnDate;
+
+          book = new Book(name, author, 0.0, SEARCHMODE);
+          book->ModifyReturnDate(newReturnDate); // Llama a ModifyReturnDate para modificar la fecha de entrega
+          
+          std::cout << GREEN << "Return date modified successfully to: "<< newReturnDate << RESET << std::endl;
+          delete book;
         }
         break;
       }
+      case '5': {
+        if (!LIBRARIAN) {
+          std::string username;
+          std::cout << BLUE << "Introduce the username: ";
+          std::cin.ignore();
+          std::getline(std::cin, username);
+          if (username == "librarian") {
+            std::string password;
+            std::cout << BLUE << "Introduce the password: ";
+            std::getline(std::cin, password);
+            if (password == "password") {
+              std::cout << GREEN << "Logged in as librarian" << RESET << std::endl;
+              LIBRARIAN = true;
+            } 
+            else {
+              std::cout << RED << "Incorrect password" << RESET << std::endl;
+            }
+          } 
+          else {
+            std::cout << RED << "Incorrect username" << RESET << std::endl;
+          }
+          break;
+        }
+        else {
+          std::cout << RED << "Incorrect option" << RESET << std::endl;
+          break;
+        }
+      }
       case '8': {
-        std::ofstream file("library.dat");
-        hash_table->SaveToFile(file);
-        break;
+        if (LIBRARIAN) {
+          std::ofstream file("library.dat");
+          hash_table->SaveToFile(file);
+          std::cout << GREEN << "Data saved successfully" << RESET << std::endl;
+          break;
+        }
+        else {
+          std::cout << RED << "Incorrect option" << RESET << std::endl;
+          break;
+        }
       }
       default:
         std::cout << RED << "Incorrect option" << RESET << std::endl;

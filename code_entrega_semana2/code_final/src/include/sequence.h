@@ -8,6 +8,7 @@ class Sequence {
  public:
   virtual bool Search(const Key& key) const = 0;
   virtual bool Insert(const Key& key) = 0;
+  virtual bool Delete(const Key& key) = 0;
   virtual Key GetKey(const int& index) const = 0;
   virtual std::ostream& Write(std::ostream& out) const = 0;
 };
@@ -19,6 +20,7 @@ class DynamicSequence: public Sequence<Key> {
   virtual ~DynamicSequence();
   bool Search(const Key& key) const;
   bool Insert(const Key& key);
+  bool Delete(const Key& key);
   Key GetKey(const int& index) const { return *block_[index]; }
   int GetSize() const { return block_.size(); }
   std::ostream& Write(std::ostream& out) const;
@@ -33,6 +35,7 @@ class StaticSequence: public Sequence<Key> {
   virtual ~StaticSequence();
   bool Search(const Key& key) const;
   bool Insert(const Key& key);
+  bool Delete(const Key& key);
   virtual bool IsFull() const;
   Key GetKey(const int& index) const {
     if (block_[index] == nullptr) return Book();
@@ -75,6 +78,17 @@ template<class Key>
 bool DynamicSequence<Key>::Insert(const Key& key) {
   block_.push_back(new Key(key));
   return true;
+}
+
+template <class Key>
+bool DynamicSequence<Key>::Delete(const Key& key) {
+  for (unsigned i = 0; i < block_.size(); ++i) {
+    if (*block_[i] == key) {
+      block_.erase(block_.begin() + i);
+      return true;
+    }
+  }
+  return false;
 }
 
 /** @brief Writes the key in the sequence
@@ -122,7 +136,7 @@ StaticSequence<Key>::~StaticSequence() {
 template<class Key>
 bool StaticSequence<Key>::Search(const Key& key) const {
   for (int i = 0; i < block_size_; ++i) {
-    if (block_[i] != nullptr && *block_[i] == key) return true;
+    if (block_[i] != nullptr && long(*block_[i]) == long(key)) return true;
   }
   return false;
 }
@@ -139,6 +153,18 @@ bool StaticSequence<Key>::Insert(const Key& key) {
   block_[top_] = new Key(key);
   ++top_;
   return true;
+}
+
+template <class Key>
+bool StaticSequence<Key>::Delete(const Key& key) {
+  for (int i = 0; i < block_size_; ++i) {
+    if (block_[i] != nullptr && long(*block_[i]) == long(key)) {
+      delete block_[i];
+      block_[i] = nullptr;
+      return true;
+    }
+  }
+  return false;
 }
 
 /** @brief Checks if the sequence is full

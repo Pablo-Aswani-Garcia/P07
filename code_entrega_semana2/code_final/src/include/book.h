@@ -15,7 +15,7 @@ struct Reservation {
 class Book {
  public:
   Book() : default_(true) {}
-  Book(const std::string& name, const std::string& author, const float& price, const int& search_mode) : name_(name), author_(author), price_(price) {
+  Book(const std::string& name, const std::string& author, const double& price, const int& search_mode) : name_(name), author_(author), price_(price) {
     switch (search_mode) {
       case 0:
         for (auto& i : name_) hash_number_ += i;
@@ -28,7 +28,6 @@ class Book {
         for (auto& i : author_) hash_number_ += i;
         break;
     }
-    std::cout << hash_number_ << std::endl;
   }
   bool operator==(const Book& book) const { return name_ == std::string(book); }
   operator long() const { return hash_number_; }
@@ -36,7 +35,7 @@ class Book {
   bool IsDefault() const { return default_; }
   std::string GetName() const { return name_; }
   std::string GetAuthor() const { return author_; }
-  float GetPrice() const { return price_; }
+  double GetPrice() const { return price_; }
   std::string GetReturnDate() const { return returnDate_; }
   std::list<Reservation> GetReservations() const { return book_reservations_; }
   void AddReservation(const Reservation& reservation) { book_reservations_.push_back(reservation); }
@@ -138,7 +137,7 @@ class Book {
   bool default_ = false;
   std::string name_;
   std::string author_;
-  float price_ = 0.0;
+  double price_ = 0.0;
   long hash_number_ = 0;
   std::string returnDate_;
   std::list<Reservation> book_reservations_;
